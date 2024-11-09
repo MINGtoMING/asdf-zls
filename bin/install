@@ -1,0 +1,77 @@
+#!/bin/bash
+
+set -eo pipefail
+
+trap cleanup SIGINT SIGTERM ERR
+
+cleanup() {
+  trap - SIGINT SIGTERM ERR
+  rm -rf "$ASDF_INSTALL_PATH"
+  echo
+  echo -e "\e[33mCleanup:\e[m Something went wrong!"
+  echo
+  echo "$(caller): ${BASH_COMMAND}"
+}
+
+fail() {
+  echo -e "\e[31mFail:\e[m $*"
+  exit 1
+}
+
+install_zls() {
+  local install_type=$1
+  local version=$2
+  local install_path=$3
+
+  if [ "$install_type" != "version" ]; then
+    fail "asdf-zig supports release installs only"
+  fi
+
+  local platform
+
+  case "$OSTYPE" in
+    darwin*) platform="macos" ;;
+    linux*) platform="linux" ;;
+    *) fail "Unsupported platform" ;;
+  esac
+
+  local architecture
+
+  case "$(uname -m)" in
+    aarch64* | arm64) architecture="aarch64" ;;
+    armv7*) architecture="armv7a" ;;
+    i686*) architecture="i386" ;;
+    riscv64*) architecture="riscv64" ;;
+    x86_64*) architecture="x86_64" ;;
+    *) fail "Unsupported architecture" ;;
+  esac
+
+  echo "∗ Downloading and installing Zls..."
+
+  local download_url
+  local source_path
+  if [ "$version" == "master" ]; then
+    download_url="https://github.com/zigtools/zls/archive/refs/heads/master.zip"
+    source_path="${install_path}/zls-${platform}-${architecture}-${version}.zip"
+  else
+    download_url="https://github.com/zigtools/zls/releases/download/${version}/zls-${architecture}-${platform}.tar.xz"
+    source_path="${install_path}/zls-${platform}-${architecture}-${version}.tar.xz"
+  fi
+  curl --fail --silent --location --create-dirs --output "$source_path" "$download_url"
+  if [ "$version" == "master" ]; then
+    unzip "$source_path" -d "$install_path"
+    mv "${install_path}/zls-master" "$install_path"
+    rm -rf "${install_path}/zls-master"
+    pushd "$install_path"
+    zig build -p . --release=safe
+    rm -rf .zig-cache
+    popd
+  else
+    tar -xf "$source_path" -C "$install_path" --strip-components=1
+    mkdir -p "${install_path}/bin"
+    ln -s "${install_path}/zls" "${install_path}/bin/zls"
+  fi
+  echo "The installation was successful!"
+}
+
+install_zls "$ASDF_INSTALL_TYPE" "$ASDF_INSTALL_VERSION" "$ASDF_INSTALL_PATH"
