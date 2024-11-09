@@ -48,25 +48,20 @@ install_zls() {
 
   echo "∗ Downloading and installing Zls..."
 
-  local download_url
-  local source_path
   if [ "$version" == "master" ]; then
-    download_url="https://github.com/zigtools/zls/archive/refs/heads/master.zip"
-    source_path="${install_path}/zls-${platform}-${architecture}-${version}.zip"
-  else
-    download_url="https://github.com/zigtools/zls/releases/download/${version}/zls-${architecture}-${platform}.tar.xz"
-    source_path="${install_path}/zls-${platform}-${architecture}-${version}.tar.xz"
-  fi
-  curl --fail --silent --location --create-dirs --output "$source_path" "$download_url"
-  if [ "$version" == "master" ]; then
-    unzip "$source_path" -d "$install_path"
-    mv "${install_path}/zls-master/*" "$install_path"
-    rm -rf "${install_path}/zls-master"
+    local download_url="https://github.com/zigtools/zls/archive/refs/heads/master.zip"
+    local source_path="${install_path}/zls-${platform}-${architecture}-${version}.zip"
     pushd "$install_path"
-    zig build -p . --release=safe
-    rm -rf .zig-cache
+    git clone https://github.com/zigtools/zls.git -b master
+    cd zls
+    zig build --release=safe
+    mv "zig-out/bin" "${install_path}/bin"
+    rm -rf "zig-out" ".zig-cache"
     popd
   else
+    local download_url="https://github.com/zigtools/zls/releases/download/${version}/zls-${architecture}-${platform}.tar.xz"
+    local source_path="${install_path}/zls-${platform}-${architecture}-${version}.tar.xz"
+    curl --fail --silent --location --create-dirs --output "$source_path" "$download_url"
     tar -xf "$source_path" -C "$install_path" --strip-components=1
     mkdir -p "${install_path}/bin"
     ln -s "${install_path}/zls" "${install_path}/bin/zls"
