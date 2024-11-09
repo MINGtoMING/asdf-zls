@@ -60,7 +60,7 @@ install_zls() {
   curl --fail --silent --location --create-dirs --output "$source_path" "$download_url"
   if [ "$version" == "master" ]; then
     unzip "$source_path" -d "$install_path"
-    mv "${install_path}/zls-master" "$install_path"
+    mv "${install_path}/zls-master/*" "$install_path"
     rm -rf "${install_path}/zls-master"
     pushd "$install_path"
     zig build -p . --release=safe
